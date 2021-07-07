@@ -48,9 +48,9 @@ function init() {
 
     window.requestAnimationFrame(draw);
 
-    window.onresize = function() {
+    window.addEventListener('resize', function() {
         window.bubbles = new Bubbles(canvas, ctx, window.bubbles.entities);
-    }
+    })
 }
 
 const getCSSCustomProp = (propKey, element = document.documentElement, castAs = 'string') => {
@@ -112,11 +112,11 @@ class Bubble {
         }
 
         if (this.isColliding({
-                pos: window.mouse.pos,
+                pos: window.bubblesMouse.pos,
                 radius: MOUSE_RADIUS
             })) {
-            let dx = this.pos.x - window.mouse.pos.x;
-            let dy = this.pos.y - window.mouse.pos.y;
+            let dx = this.pos.x - window.bubblesMouse.pos.x;
+            let dy = this.pos.y - window.bubblesMouse.pos.y;
 
             let dist = Math.sqrt(dx * dx + dy * dy) || 1;
 
@@ -126,8 +126,8 @@ class Bubble {
 
             let cr = this.radius + MOUSE_RADIUS;
 
-            this.pos.x = window.mouse.pos.x + cr * ux;
-            this.pos.y = window.mouse.pos.y + cr * uy;
+            this.pos.x = window.bubblesMouse.pos.x + cr * ux;
+            this.pos.y = window.bubblesMouse.pos.y + cr * uy;
 
             this.vel.x *= -1;
             this.vel.y *= -1;
@@ -187,7 +187,7 @@ class Bubbles {
         }
         this.entityPairs = pairs(this.entities);
 
-        window.mouse = window.mouse || {
+        window.bubblesMouse = window.bubblesMouse || {
             pos: {
                 x: 0,
                 y: 0
@@ -196,11 +196,11 @@ class Bubbles {
             left: false
         };
 
-        window.onmousemove = (e) => {
+        window.addEventListener('mouseMove', (e) => {
             let rect = this.canvas.getBoundingClientRect();
-            window.mouse.pos.x = Math.round(e.clientX - rect.left);
-            window.mouse.pos.y = Math.round(e.clientY - rect.top);
-        }
+            window.bubblesMouse.pos.x = Math.round(e.clientX - rect.left);
+            window.bubblesMouse.pos.y = Math.round(e.clientY - rect.top);
+        });
     }
 
     update() {
@@ -242,7 +242,7 @@ class Bubbles {
 
     drawMouse() {
         this.ctx.beginPath();
-        this.ctx.arc(window.mouse.pos.x, window.mouse.pos.y, MOUSE_RADIUS, 0, 2 * Math.PI, false);
+        this.ctx.arc(window.bubblesMouse.pos.x, window.bubblesMouse.pos.y, MOUSE_RADIUS, 0, 2 * Math.PI, false);
         this.ctx.globalAlpha = 1;
         this.ctx.closePath();
         this.ctx.fillStyle = 'red';
