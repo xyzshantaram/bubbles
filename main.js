@@ -196,7 +196,7 @@ class Bubbles {
             left: false
         };
 
-        window.addEventListener('mouseMove', (e) => {
+        window.addEventListener('mousemove', (e) => {
             let rect = this.canvas.getBoundingClientRect();
             window.bubblesMouse.pos.x = Math.round(e.clientX - rect.left);
             window.bubblesMouse.pos.y = Math.round(e.clientY - rect.top);
