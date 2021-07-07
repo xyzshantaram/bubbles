@@ -28,3 +28,9 @@ body {
         --particle-radius-max: 4;
     }
 }
+
+@media (prefers-reduced-motion) {
+    :root {
+        --particles-off: 1;
+    }
+}
