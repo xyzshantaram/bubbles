@@ -1,0 +1,30 @@
+:root {
+    --bg: #303030;
+}
+
+body {
+    height: 100vh;
+    margin: 0;
+}
+
+:root {
+    --particle-count: 200;
+    --particle-radius-min: 5;
+    --particle-radius-max: 10;
+}
+
+@media screen and (max-aspect-ratio: 1/1) {
+    :root {
+        --particle-count: 150;
+        --particle-radius-min: 3;
+        --particle-radius-max: 8;
+    }
+}
+
+@media screen and (max-aspect-ratio: 9/17) {
+    :root {
+        --particle-count: 300;
+        --particle-radius-min: 1;
+        --particle-radius-max: 4;
+    }
+}
