@@ -235,8 +235,6 @@ class Bubbles {
 
     draw() {
         this.update();
-        this.drawMouse();
-
         for (let bubble of this.entities) {
             bubble.draw(this.ctx);
         }
