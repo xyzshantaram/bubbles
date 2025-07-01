@@ -48,7 +48,7 @@ function init() {
 
     window.requestAnimationFrame(draw);
 
-    window.addEventListener('resize', function() {
+    window.addEventListener('resize', function () {
         window.bubbles = new Bubbles(canvas, ctx, window.bubbles.entities);
     })
 }
@@ -76,6 +76,8 @@ const getCSSCustomProp = (propKey, castAs = 'string', element = document.documen
     return response;
 };
 
+const lerpFactor = getCSSCustomProp('--bubble-lerp-factor', 'float') || 0.2;
+
 class Bubble {
     constructor(parent, color, alpha) {
         this.parent = parent;
@@ -100,6 +102,11 @@ class Bubble {
         this.alpha = alpha;
     }
 
+    // Linear interpolation helper
+    lerp(a, b, t) {
+        return a + (b - a) * t;
+    }
+
     update() {
         this.pos.x += this.vel.x;
         this.pos.y += this.vel.y;
@@ -113,22 +120,24 @@ class Bubble {
         }
 
         if (this.isColliding({
-                pos: window.bubblesMouse.pos,
-                radius: MOUSE_RADIUS
-            })) {
+            pos: window.bubblesMouse.pos,
+            radius: MOUSE_RADIUS
+        })) {
             let dx = this.pos.x - window.bubblesMouse.pos.x;
             let dy = this.pos.y - window.bubblesMouse.pos.y;
 
             let dist = Math.sqrt(dx * dx + dy * dy) || 1;
-
-            // unit vector
             let ux = dx / dist;
             let uy = dy / dist;
-
             let cr = this.radius + MOUSE_RADIUS;
 
-            this.pos.x = window.bubblesMouse.pos.x + cr * ux;
-            this.pos.y = window.bubblesMouse.pos.y + cr * uy;
+            // Dest is the target position outside the collider
+            let targetX = window.bubblesMouse.pos.x + cr * ux;
+            let targetY = window.bubblesMouse.pos.y + cr * uy;
+
+            // Lerp factor configurable via CSS custom property, fallback to 0.2
+            this.pos.x = this.lerp(this.pos.x, targetX, lerpFactor);
+            this.pos.y = this.lerp(this.pos.y, targetY, lerpFactor);
 
             this.vel.x *= -1;
             this.vel.y *= -1;
