@@ -30,6 +30,44 @@ function clamp(min, num, max) {
     return num;
 }
 
+function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    let max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+    if(max == min){
+        h = s = 0; // achromatic
+    }else{
+        let d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch(max){
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+    return {
+        h: Math.round(h * 360),
+        s: Math.round(s * 100),
+        l: Math.round(l * 100)
+    };
+}
+// Supports #hex, rgb(), or hsl()
+function colorStringToHsl(colorStr) {
+    let ctx = colorStringToHsl._ctx;
+    if (!ctx) {
+        let canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 1;
+        ctx = canvas.getContext('2d');
+        colorStringToHsl._ctx = ctx;
+    }
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.fillStyle = colorStr;
+    ctx.fillRect(0, 0, 1, 1);
+    let [r, g, b] = [...ctx.getImageData(0, 0, 1, 1).data];
+    return rgbToHsl(r, g, b);
+}
+
 const pairs = (arr) => arr.map((v, i) => arr.slice(i + 1).map(w => [v, w])).flat();
 
 function init() {
@@ -109,11 +147,12 @@ class Bubble {
 
         this.movementType = movementType;
         this.center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-        // For radial movement, store the spawn radius and initial angle
         if (movementType === 'radial') {
             this.orbitRadius = distance(this.pos, this.center);
             this.orbitAngle = Math.atan2(this.pos.y - this.center.y, this.pos.x - this.center.x);
-            this.orbitSpeed = parseFloat(getCSSCustomProp('--bubble-radial-speed', 'float')) || 0.01;
+            const baseRadialSpeed = parseFloat(getCSSCustomProp('--bubble-radial-speed', 'float')) || 0.002;
+            const jitter = randRange(-0.001, 0.001);
+            this.orbitSpeed = (baseRadialSpeed / (this.orbitRadius / 120 + 1)) + jitter;
         }
 
         const randSign = () => Math.random() >= 50 ? 1 : -1;
@@ -125,13 +164,11 @@ class Bubble {
 
         this.color = color;
         this.alpha = alpha;
-        this.shape = shape; // circle, star, star-outline
+        this.shape = shape;
 
-        // animationFrame: internal timer, increments every second
         this.animationFrame = randInt(0, 10000);
         this._animationFramePrevSec = Math.floor(Date.now() / 1000);
 
-        // Star rotation/rotationSpeed
         const spinMin = parseFloat(getCSSCustomProp('--star-spin-min', 'float')) || -0.03;
         const spinMax = parseFloat(getCSSCustomProp('--star-spin-max', 'float')) || 0.03;
         if (this.shape === 'star' || this.shape === 'star-outline') {
@@ -141,6 +178,12 @@ class Bubble {
             this.rotation = 0;
             this.rotationSpeed = 0;
         }
+        // Twinkle: Each bubble gets a unique speed and phase
+        this.twinkleSpeed = randRange(0.6, 1.2);
+        this.twinklePhase = randRange(0, Math.PI * 2);
+
+        // Cache parsed HSL color for brightness manipulation
+        this._baseHSL = colorStringToHsl(this.color);
     }
 
     // Linear interpolation helper
@@ -149,7 +192,6 @@ class Bubble {
     }
 
     update() {
-        // animationFrame increments once per second
         const nowSec = Math.floor(Date.now() / 1000);
         if (nowSec !== this._animationFramePrevSec) {
             this._animationFramePrevSec = nowSec;
@@ -157,12 +199,10 @@ class Bubble {
         }
 
         if (this.movementType === 'radial') {
-            // Orbit around center at fixed radius/speed
             this.orbitAngle += this.orbitSpeed;
             this.pos.x = this.center.x + this.orbitRadius * Math.cos(this.orbitAngle);
             this.pos.y = this.center.y + this.orbitRadius * Math.sin(this.orbitAngle);
         } else {
-            // random movement (classic)
             this.pos.x += this.vel.x;
             this.pos.y += this.vel.y;
             if (this.pos.x - this.radius * 2 > window.bubbles.width || this.pos.x - this.radius * 2 < 0) {
@@ -172,13 +212,10 @@ class Bubble {
                 this.vel.y *= -1;
             }
         }
-
-        // Animate rotation for stars only
+        // Spin for stars
         if (this.shape === 'star' || this.shape === 'star-outline') {
-            // Spin: rotation is based on animationFrame and rotationSpeed for deterministic but unique motion
             this.rotation += this.rotationSpeed;
         }
-
         if (this.isColliding({
             pos: window.bubblesMouse.pos,
             radius: MOUSE_RADIUS
@@ -203,25 +240,46 @@ class Bubble {
 
     draw(ctx) {
         this.update();
+        // Twinkle as brightness modulation with smoothing (lerp fade)
+        let t = this.animationFrame * this.twinkleSpeed + this.twinklePhase;
+        let twinkleStyle = (getCSSCustomProp('--bubble-twinkle-style') || 'fade').toLowerCase();
+        let tw;
+        if (twinkleStyle === 'flash') {
+            tw = Math.sin(t) > 0 ? 1.0 : 0.4;
+        } else {
+            tw = Math.sin(t) * 0.3 + 0.7;
+        }
+
+        let h = this._baseHSL.h;
+        let s = this._baseHSL.s;
+        let baseL = this._baseHSL.l;
+        // Target lightness for this frame
+        let targetL = clamp(25, baseL * tw, 96);
+        // Smoothly lerp lightness
+        if (this.twinkleL === undefined) this.twinkleL = baseL;
+        this.twinkleL += (targetL - this.twinkleL) * 0.12; // smoothing factor
+        let l = this.twinkleL;
+        let twinkleColor = `hsl(${h},${s}%,${l}%)`;
+
         ctx.beginPath();
         if (this.shape === 'star') {
             drawStar(ctx, this.pos.x, this.pos.y, this.radius, 5, 0.5, this.rotation);
             ctx.globalAlpha = this.alpha;
             ctx.closePath();
-            ctx.fillStyle = this.color;
+            ctx.fillStyle = twinkleColor;
             ctx.fill();
         } else if (this.shape === 'star-outline') {
             drawStar(ctx, this.pos.x, this.pos.y, this.radius, 5, 0.5, this.rotation);
             ctx.globalAlpha = this.alpha;
             ctx.closePath();
-            ctx.strokeStyle = this.color;
+            ctx.strokeStyle = twinkleColor;
             ctx.lineWidth = 2;
             ctx.stroke();
         } else {
             ctx.arc(this.pos.x, this.pos.y, this.radius, 0, 2 * Math.PI, false);
             ctx.globalAlpha = this.alpha;
             ctx.closePath();
-            ctx.fillStyle = this.color;
+            ctx.fillStyle = twinkleColor;
             ctx.fill();
         }
     }
