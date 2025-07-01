@@ -34,12 +34,12 @@ function rgbToHsl(r, g, b) {
     r /= 255; g /= 255; b /= 255;
     let max = Math.max(r, g, b), min = Math.min(r, g, b);
     let h, s, l = (max + min) / 2;
-    if(max == min){
+    if (max == min) {
         h = s = 0; // achromatic
-    }else{
+    } else {
         let d = max - min;
         s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-        switch(max){
+        switch (max) {
             case r: h = (g - b) / d + (g < b ? 6 : 0); break;
             case g: h = (b - r) / d + 2; break;
             case b: h = (r - g) / d + 4; break;
@@ -150,7 +150,7 @@ class Bubble {
         if (movementType === 'radial') {
             this.orbitRadius = distance(this.pos, this.center);
             this.orbitAngle = Math.atan2(this.pos.y - this.center.y, this.pos.x - this.center.x);
-            const baseRadialSpeed = parseFloat(getCSSCustomProp('--bubble-radial-speed', 'float')) || 0.002;
+            const baseRadialSpeed = parseFloat(getCSSCustomProp('--particle-radial-speed', 'float')) || 0.002;
             const jitter = randRange(-0.001, 0.001);
             this.orbitSpeed = (baseRadialSpeed / (this.orbitRadius / 120 + 1)) + jitter;
         }
@@ -169,8 +169,8 @@ class Bubble {
         this.animationFrame = randInt(0, 10000);
         this._animationFramePrevSec = Math.floor(Date.now() / 1000);
 
-        const spinMin = parseFloat(getCSSCustomProp('--star-spin-min', 'float')) || -0.03;
-        const spinMax = parseFloat(getCSSCustomProp('--star-spin-max', 'float')) || 0.03;
+        const spinMin = parseFloat(getCSSCustomProp('--particle-spin-min', 'float')) || -0.03;
+        const spinMax = parseFloat(getCSSCustomProp('--particle-spin-max', 'float')) || 0.03;
         if (this.shape === 'star' || this.shape === 'star-outline') {
             this.rotation = randRange(0, Math.PI * 2);
             this.rotationSpeed = randRange(spinMin, spinMax);
@@ -217,6 +217,7 @@ class Bubble {
             this.rotation += this.rotationSpeed;
         }
         // Disable mouse interaction when in radial mode
+        // TODO: Fix this properly
         if (this.movementType !== 'radial' && this.isColliding({
             pos: window.bubblesMouse.pos,
             radius: MOUSE_RADIUS
@@ -229,7 +230,7 @@ class Bubble {
             let cr = this.radius + MOUSE_RADIUS;
             let targetX = window.bubblesMouse.pos.x + cr * ux;
             let targetY = window.bubblesMouse.pos.y + cr * uy;
-            const lerpFactor = getCSSCustomProp('--bubble-lerp-factor', 'float') || 0.2;
+            const lerpFactor = getCSSCustomProp('--particle-lerp-factor', 'float') || 0.2;
             this.pos.x = this.lerp(this.pos.x, targetX, lerpFactor);
             this.pos.y = this.lerp(this.pos.y, targetY, lerpFactor);
             this.vel.x *= -1;
@@ -243,7 +244,7 @@ class Bubble {
         this.update();
         // Twinkle as brightness modulation with smoothing (lerp fade)
         let t = this.animationFrame * this.twinkleSpeed + this.twinklePhase;
-        let twinkleStyle = (getCSSCustomProp('--bubble-twinkle-style') || 'fade').toLowerCase();
+        let twinkleStyle = (getCSSCustomProp('--particle-twinkle-style') || 'fade').toLowerCase();
         let tw;
         if (twinkleStyle === 'flash') {
             tw = Math.sin(t) > 0 ? 1.0 : 0.4;
@@ -312,8 +313,8 @@ class Bubbles {
         this.color = getCSSCustomProp('--particle-color') || 'orangered';
         let maxAlpha = getCSSCustomProp('--max-alpha', 'int') || 100;
         this.entities = entities;
-        let shapePref = getCSSCustomProp('--bubble-shape') || 'circle';
-        let movementPref = getCSSCustomProp('--bubble-movement') || 'random';
+        let shapePref = getCSSCustomProp('--particle-shape') || 'circle';
+        let movementPref = getCSSCustomProp('--particle-movement') || 'random';
         if (entities.length === 0) {
             let particleCount = getCSSCustomProp('--particle-count', 'int');
             for (let x = 0; x < particleCount; x++) {

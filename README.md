@@ -38,21 +38,21 @@ Add these variables to your `:root` or any CSS selector to further customize the
 ```css
 :root {
     /* SHAPE AND RENDERING */
-    --bubble-shape: circle;      /* Options: 'circle', 'star', 'star-outline', or 'random' for variety. */
-    --bubble-movement: random;   /* 'random' (default/classic), or 'radial' to orbit the center. */
+    --particle-shape: circle;      /* Options: 'circle', 'star', 'star-outline', or 'random' for variety. */
+    --particle-movement: random;   /* 'random' (default/classic), or 'radial' to orbit the center. */
 
     /* LERP AND MOUSE INTERACTION */
-    --bubble-lerp-factor: 0.2;   /* How quickly bubbles are repelled from the mouse (smaller = slower/softer). */
+    --particle-lerp-factor: 0.2;   /* How quickly particles are repelled from the mouse (smaller = slower/softer). */
 
     /* STAR SPINNING */
-    --star-spin-min: -0.03;      /* Minimum star rotation speed (radians/frame). */
-    --star-spin-max: 0.03;       /* Maximum star rotation speed (radians/frame). */
+    --particle-spin-min: -0.03;      /* Minimum star rotation speed (radians/frame). */
+    --particle-spin-max: 0.03;       /* Maximum star rotation speed (radians/frame). */
 
     /* RADIAL MOVEMENT */
-    --bubble-radial-speed: 0.002; /* Base speed for radial orbit (the actual speed also depends on spawn radius and jitter). */
+    --particle-radial-speed: 0.002; /* Base speed for radial orbit (the actual speed also depends on spawn radius and jitter). */
 
     /* TWINKLE EFFECT */
-    --bubble-twinkle-style: fade;  /* 'fade' (smooth brightness fade, default) or 'flash' (hard blink). */
+    --particle-twinkle-style: fade;  /* 'fade' (smooth brightness fade, default) or 'flash' (hard blink). */
 }
 ```
 
@@ -71,6 +71,6 @@ Add these variables to your `:root` or any CSS selector to further customize the
 ### Twinkle
 
 - All particles smoothly vary in brightness over time.
-- Use `--bubble-twinkle-style: flash;` for abrupt "Christmas lights" blinking.
+- Use `--particle-twinkle-style: flash;` for abrupt "Christmas lights" blinking.
 
 Copyright © 2021 Siddharth Singh, subject to the terms of the MIT License
