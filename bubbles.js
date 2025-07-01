@@ -150,9 +150,10 @@ class Bubble {
         if (movementType === 'radial') {
             this.orbitRadius = distance(this.pos, this.center);
             this.orbitAngle = Math.atan2(this.pos.y - this.center.y, this.pos.x - this.center.x);
-            const baseRadialSpeed = parseFloat(getCSSCustomProp('--particle-radial-speed', 'float')) || 0.002;
-            const jitter = randRange(-0.001, 0.001);
-            this.orbitSpeed = (baseRadialSpeed / (this.orbitRadius / 120 + 1)) + jitter;
+            // Simple and direct: base orbit speed depends on radius, user setting acts as a direct multiplier. Negative reverses direction.
+            const speedScale = parseFloat(getCSSCustomProp('--particle-radial-speed', 'float')) || 1;
+            const baseSpeed = 0.2 / (this.orbitRadius + 60); // in [radians/frame], +60 so very close to center isn't a blur
+            this.orbitSpeed = baseSpeed * speedScale + randRange(-0.0005, 0.0005);
         }
 
         const randSign = () => Math.random() >= 50 ? 1 : -1;

@@ -49,7 +49,7 @@ Add these variables to your `:root` or any CSS selector to further customize the
     --particle-spin-max: 0.03;       /* Maximum star rotation speed (radians/frame). */
 
     /* RADIAL MOVEMENT */
-    --particle-radial-speed: 0.002; /* Base speed for radial orbit (the actual speed also depends on spawn radius and jitter). */
+    --particle-radial-speed: 1; /* Multiplies entire orbit speed field. 1 = default, 0.1 = 10x slower, 2 = 2x faster, negative reverses direction. */
 
     /* TWINKLE EFFECT */
     --particle-twinkle-style: fade;  /* 'fade' (smooth brightness fade, default) or 'flash' (hard blink). */

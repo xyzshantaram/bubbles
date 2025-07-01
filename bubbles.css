@@ -8,8 +8,17 @@ body {
     --particle-count: 200;
     --particle-radius-min: 5;
     --particle-radius-max: 10;
-    --bubble-shape: star-outline;
-    --bubble-movement: radial;
+    --particle-shape: star-outline;
+    --particle-movement: radial;
+    /* STAR SPINNING */
+    --particle-spin-min: -0.001;
+    /* Minimum star rotation speed (radians/frame). */
+    --particle-spin-max: 0.001;
+    /* Maximum star rotation speed (radians/frame). */
+
+    /* RADIAL MOVEMENT */
+    --particle-radial-speed: 0.01;
+    /* Base speed for radial orbit (the actual speed also depends on spawn radius and jitter). */
 }
 
 @media screen and (max-aspect-ratio: 1/1) {
