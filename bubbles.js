@@ -9,6 +9,10 @@ function randInt(start, stop) {
     return start + Math.floor(Math.random() * (stop - start));
 }
 
+function randRange(a, b) {
+    return a + Math.random() * (b - a);
+}
+
 function distance(one, two) {
     return Math.sqrt(
         Math.pow(two.x - one.x, 2) +
@@ -20,11 +24,9 @@ function clamp(min, num, max) {
     if (num < min) {
         return min;
     }
-
     if (num > max) {
         return max;
     }
-
     return num;
 }
 
@@ -55,13 +57,11 @@ function init() {
 
 const getCSSCustomProp = (propKey, castAs = 'string', element = document.documentElement) => {
     let response = getComputedStyle(element).getPropertyValue(propKey);
-    // Tidy up the string if there's something to work with
     if (response.length) {
         response = response.replace(/\'|"/g, '').trim();
     } else {
         return null;
     }
-    // Convert the response into a whatever type we wanted
     switch (castAs) {
         case 'number':
         case 'int':
@@ -72,14 +72,31 @@ const getCSSCustomProp = (propKey, castAs = 'string', element = document.documen
         case 'bool':
             return response === 'true' || response === '1';
     }
-    // Return the string response by default
     return response;
 };
 
-const lerpFactor = getCSSCustomProp('--bubble-lerp-factor', 'float') || 0.2;
+function drawStar(ctx, x, y, radius, points = 5, inset = 0.5, rotation = 0) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+    ctx.moveTo(
+        0 + radius * Math.cos(0),
+        0 + radius * Math.sin(0)
+    );
+    for (let i = 0; i < points * 2; i++) {
+        const angle = (Math.PI / points) * i;
+        const r = i % 2 === 0 ? radius : radius * inset;
+        ctx.lineTo(
+            0 + r * Math.cos(angle),
+            0 + r * Math.sin(angle)
+        );
+    }
+    ctx.closePath();
+    ctx.restore();
+}
 
 class Bubble {
-    constructor(parent, color, alpha) {
+    constructor(parent, color, alpha, shape = 'circle', movementType = 'random') {
         this.parent = parent;
         const radiusUpperBound = getCSSCustomProp('--particle-radius-max', 'int');
         const radiusLowerBound = getCSSCustomProp('--particle-radius-min', 'int');
@@ -88,18 +105,42 @@ class Bubble {
         this.pos = {
             x: randInt(0 + this.radius, window.innerWidth - this.radius),
             y: randInt(0 + this.radius, window.innerHeight - this.radius)
+        };
+
+        this.movementType = movementType;
+        this.center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        // For radial movement, store the spawn radius and initial angle
+        if (movementType === 'radial') {
+            this.orbitRadius = distance(this.pos, this.center);
+            this.orbitAngle = Math.atan2(this.pos.y - this.center.y, this.pos.x - this.center.x);
+            this.orbitSpeed = parseFloat(getCSSCustomProp('--bubble-radial-speed', 'float')) || 0.01;
         }
 
         const randSign = () => Math.random() >= 50 ? 1 : -1;
         const velocityConstant = getCSSCustomProp('--velocity-constant', 'float') || 0.5;
-
         this.vel = {
             x: randSign() * Math.random() * velocityConstant,
             y: randSign() * Math.random() * velocityConstant,
-        }
+        };
 
         this.color = color;
         this.alpha = alpha;
+        this.shape = shape; // circle, star, star-outline
+
+        // animationFrame: internal timer, increments every second
+        this.animationFrame = randInt(0, 10000);
+        this._animationFramePrevSec = Math.floor(Date.now() / 1000);
+
+        // Star rotation/rotationSpeed
+        const spinMin = parseFloat(getCSSCustomProp('--star-spin-min', 'float')) || -0.03;
+        const spinMax = parseFloat(getCSSCustomProp('--star-spin-max', 'float')) || 0.03;
+        if (this.shape === 'star' || this.shape === 'star-outline') {
+            this.rotation = randRange(0, Math.PI * 2);
+            this.rotationSpeed = randRange(spinMin, spinMax);
+        } else {
+            this.rotation = 0;
+            this.rotationSpeed = 0;
+        }
     }
 
     // Linear interpolation helper
@@ -108,15 +149,34 @@ class Bubble {
     }
 
     update() {
-        this.pos.x += this.vel.x;
-        this.pos.y += this.vel.y;
-
-        if (this.pos.x - this.radius * 2 > window.bubbles.width || this.pos.x - this.radius * 2 < 0) {
-            this.vel.x *= -1;
+        // animationFrame increments once per second
+        const nowSec = Math.floor(Date.now() / 1000);
+        if (nowSec !== this._animationFramePrevSec) {
+            this._animationFramePrevSec = nowSec;
+            this.animationFrame++;
         }
 
-        if (this.pos.y - this.radius * 2 > window.bubbles.height || this.pos.y - this.radius < 0) {
-            this.vel.y *= -1;
+        if (this.movementType === 'radial') {
+            // Orbit around center at fixed radius/speed
+            this.orbitAngle += this.orbitSpeed;
+            this.pos.x = this.center.x + this.orbitRadius * Math.cos(this.orbitAngle);
+            this.pos.y = this.center.y + this.orbitRadius * Math.sin(this.orbitAngle);
+        } else {
+            // random movement (classic)
+            this.pos.x += this.vel.x;
+            this.pos.y += this.vel.y;
+            if (this.pos.x - this.radius * 2 > window.bubbles.width || this.pos.x - this.radius * 2 < 0) {
+                this.vel.x *= -1;
+            }
+            if (this.pos.y - this.radius * 2 > window.bubbles.height || this.pos.y - this.radius < 0) {
+                this.vel.y *= -1;
+            }
+        }
+
+        // Animate rotation for stars only
+        if (this.shape === 'star' || this.shape === 'star-outline') {
+            // Spin: rotation is based on animationFrame and rotationSpeed for deterministic but unique motion
+            this.rotation += this.rotationSpeed;
         }
 
         if (this.isColliding({
@@ -125,36 +185,45 @@ class Bubble {
         })) {
             let dx = this.pos.x - window.bubblesMouse.pos.x;
             let dy = this.pos.y - window.bubblesMouse.pos.y;
-
             let dist = Math.sqrt(dx * dx + dy * dy) || 1;
             let ux = dx / dist;
             let uy = dy / dist;
             let cr = this.radius + MOUSE_RADIUS;
-
-            // Dest is the target position outside the collider
             let targetX = window.bubblesMouse.pos.x + cr * ux;
             let targetY = window.bubblesMouse.pos.y + cr * uy;
-
-            // Lerp factor configurable via CSS custom property, fallback to 0.2
+            const lerpFactor = getCSSCustomProp('--bubble-lerp-factor', 'float') || 0.2;
             this.pos.x = this.lerp(this.pos.x, targetX, lerpFactor);
             this.pos.y = this.lerp(this.pos.y, targetY, lerpFactor);
-
             this.vel.x *= -1;
             this.vel.y *= -1;
-
-            this.pos.x = clamp(this.radius, this.pos.x, parent.width - this.radius);
-            this.pos.y = clamp(this.radius, this.pos.y, parent.height - this.radius);
+            this.pos.x = clamp(this.radius, this.pos.x, this.parent.width - this.radius);
+            this.pos.y = clamp(this.radius, this.pos.y, this.parent.height - this.radius);
         }
     }
 
     draw(ctx) {
         this.update();
         ctx.beginPath();
-        ctx.arc(this.pos.x, this.pos.y, this.radius, 0, 2 * Math.PI, false);
-        ctx.globalAlpha = this.alpha;
-        ctx.closePath();
-        ctx.fillStyle = this.color;
-        ctx.fill();
+        if (this.shape === 'star') {
+            drawStar(ctx, this.pos.x, this.pos.y, this.radius, 5, 0.5, this.rotation);
+            ctx.globalAlpha = this.alpha;
+            ctx.closePath();
+            ctx.fillStyle = this.color;
+            ctx.fill();
+        } else if (this.shape === 'star-outline') {
+            drawStar(ctx, this.pos.x, this.pos.y, this.radius, 5, 0.5, this.rotation);
+            ctx.globalAlpha = this.alpha;
+            ctx.closePath();
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        } else {
+            ctx.arc(this.pos.x, this.pos.y, this.radius, 0, 2 * Math.PI, false);
+            ctx.globalAlpha = this.alpha;
+            ctx.closePath();
+            ctx.fillStyle = this.color;
+            ctx.fill();
+        }
     }
 
     isColliding(that) {
@@ -175,38 +244,37 @@ class Bubbles {
             overflow: 'hidden',
             zIndex: '-1'
         });
-
         this.ctx = ctx;
         this.canvas = canvas;
-
         this.width = window.innerWidth;
         this.height = window.innerHeight;
         this.canvas.width = this.width;
         this.canvas.height = this.height;
-
         this.color = getCSSCustomProp('--particle-color') || 'orangered';
         let maxAlpha = getCSSCustomProp('--max-alpha', 'int') || 100;
-
         this.entities = entities;
+        let shapePref = getCSSCustomProp('--bubble-shape') || 'circle';
+        let movementPref = getCSSCustomProp('--bubble-movement') || 'random';
         if (entities.length === 0) {
             let particleCount = getCSSCustomProp('--particle-count', 'int');
             for (let x = 0; x < particleCount; x++) {
+                let shape = 'circle';
+                if (shapePref === 'star' || shapePref === 'star-outline' || shapePref === 'circle') {
+                    shape = shapePref;
+                } else if (shapePref === 'random') {
+                    let shapes = ['circle', 'star', 'star-outline'];
+                    shape = shapes[randInt(0, shapes.length)];
+                }
+                let movementType = movementPref === 'random' ? 'random' : (movementPref === 'radial' ? 'radial' : 'random');
                 this.entities.push(
-                    new Bubble(this, this.color, 0.1 + (randInt(0, maxAlpha) * 0.01))
+                    new Bubble(this, this.color, 0.1 + (randInt(0, maxAlpha) * 0.01), shape, movementType)
                 );
             }
         }
         this.entityPairs = pairs(this.entities);
-
         window.bubblesMouse = window.bubblesMouse || {
-            pos: {
-                x: 0,
-                y: 0
-            },
-            right: false,
-            left: false
+            pos: { x: 0, y: 0 }, right: false, left: false
         };
-
         window.addEventListener('mousemove', (e) => {
             let rect = this.canvas.getBoundingClientRect();
             window.bubblesMouse.pos.x = Math.round(e.clientX - rect.left);
@@ -215,27 +283,19 @@ class Bubbles {
     }
 
     update() {
-        const resolved = []
+        const resolved = [];
         const collidingPairs = this.entityPairs.filter(pair => pair[0].isColliding(pair[1]));
-
         for (let pair of collidingPairs) {
             if (!resolved.includes(pair)) {
                 resolved.push(pair);
-
                 let dx = pair[0].pos.x - pair[1].pos.x;
                 let dy = pair[0].pos.y - pair[1].pos.y;
-
                 let dist = Math.sqrt(dx * dx + dy * dy) || 1;
-
-                // unit vector
                 let ux = dx / dist;
                 let uy = dy / dist;
-
                 let cr = pair[0].radius + pair[1].radius;
-
                 pair[0].pos.x = pair[1].pos.x + cr * ux;
                 pair[0].pos.y = pair[1].pos.y + cr * uy;
-
                 pair[0].vel.x *= -1;
                 pair[0].vel.y *= -1;
                 pair[1].vel.x *= -1;

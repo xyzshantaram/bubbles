@@ -1,13 +1,15 @@
 body {
     height: 100vh;
     margin: 0;
-    background: #303030;
+    background: #202020;
 }
 
 :root {
     --particle-count: 200;
     --particle-radius-min: 5;
     --particle-radius-max: 10;
+    --bubble-shape: star-outline;
+    --bubble-movement: radial;
 }
 
 @media screen and (max-aspect-ratio: 1/1) {
