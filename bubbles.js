@@ -216,7 +216,8 @@ class Bubble {
         if (this.shape === 'star' || this.shape === 'star-outline') {
             this.rotation += this.rotationSpeed;
         }
-        if (this.isColliding({
+        // Disable mouse interaction when in radial mode
+        if (this.movementType !== 'radial' && this.isColliding({
             pos: window.bubblesMouse.pos,
             radius: MOUSE_RADIUS
         })) {
